@@ -1,17 +1,21 @@
-use std::{env, sync::{Arc, Mutex}, error::Error};
-use actix_web::{web, App, HttpServer, middleware::Logger, dev::Service};
-use reqwest::StatusCode;
-use server::{init::init, api::structs::stats::{SessionStats, LifetimeStats}, root::{root, ping}};
+use actix_web::{dev::Service, middleware::Logger, web, App, HttpServer};
 use futures_util::future::FutureExt;
+use reqwest::StatusCode;
+use server::{
+    api::structs::stats::{LifetimeStats, SessionStats},
+    init::init,
+    root::{ping, root},
+};
+use std::{
+    error::Error,
+    sync::{Arc, Mutex},
+};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    env::set_var("RUST_LOG", "info");
-    env_logger::init();
-
     init()?;
 
-    let session_stats = Arc::new(Mutex::new(SessionStats::new()));
+    let session_stats = Arc::new(Mutex::new(SessionStats::default()));
     let mut lifetime_stats = LifetimeStats::load();
 
     let session_stats_for_app = session_stats.clone();
@@ -23,7 +27,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         App::new()
             .wrap(Logger::default())
             .wrap_fn(move |req, srv| {
-
                 let session_stats_cloned = session_stats_for_middleware.clone();
                 let req_path = req.path().to_string();
 
@@ -41,12 +44,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     session_stats.served += 1;
                     match session_stats.served_paths.get_mut(&req_path) {
                         Some(path) => *path += 1,
-                        None => {session_stats.served_paths.insert(req_path, 1);},
+                        None => {
+                            session_stats.served_paths.insert(req_path, 1);
+                        }
                     }
 
                     res
                 })
-
             })
             .service(server::api::scope())
             .service(root)

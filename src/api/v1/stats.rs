@@ -1,10 +1,14 @@
-use std::{sync::{Arc, Mutex}, collections::HashMap, error::Error};
+use std::{
+    collections::HashMap,
+    error::Error,
+    sync::{Arc, Mutex},
+};
 
-use actix_web::{get, web, HttpResponse, http::header::ContentType};
+use actix_web::{get, http::header::ContentType, web, HttpResponse};
 use chrono::Utc;
 use serde::Serialize;
 
-use crate::api::structs::stats::{SessionStats, LifetimeStats};
+use crate::api::structs::stats::{LifetimeStats, SessionStats};
 
 #[derive(Serialize)]
 pub struct StatsRes<'a> {
@@ -32,7 +36,11 @@ impl<'a> From<(&'a SessionStats, &'a LifetimeStats)> for StatsRes<'a> {
     fn from((session_stats, lifetime_stats): (&'a SessionStats, &'a LifetimeStats)) -> Self {
         Self {
             software: SoftwareStatsRes::default(),
-            lifetime: LifetimeStatsRes { total_uptime: lifetime_stats.total_uptime, served: lifetime_stats.served, served_paths: &lifetime_stats.served_paths },
+            lifetime: LifetimeStatsRes {
+                total_uptime: lifetime_stats.total_uptime,
+                served: lifetime_stats.served,
+                served_paths: &lifetime_stats.served_paths,
+            },
             session: SessionStatsRes {
                 start: session_stats.start,
                 uptime: Utc::now().timestamp_millis() - session_stats.start,
@@ -43,7 +51,7 @@ impl<'a> From<(&'a SessionStats, &'a LifetimeStats)> for StatsRes<'a> {
     }
 }
 
-const VERSION: &'static str = "0.1.0";
+const VERSION: &str = "0.1.0";
 
 #[derive(Serialize)]
 pub struct SoftwareStatsRes {
@@ -57,10 +65,15 @@ impl Default for SoftwareStatsRes {
 }
 
 #[get("/stats")]
-pub async fn stats(session_stats: web::Data<Arc<Mutex<SessionStats>>>, lifetime_stats: web::Data<LifetimeStats>) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn stats(
+    session_stats: web::Data<Arc<Mutex<SessionStats>>>,
+    lifetime_stats: web::Data<LifetimeStats>,
+) -> Result<HttpResponse, Box<dyn Error>> {
     let session_stats_mut_ref = &*session_stats.lock().unwrap();
     let res_struct = StatsRes::from((session_stats_mut_ref, &**lifetime_stats));
     let res_content = serde_json::to_string(&res_struct)?;
 
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(res_content))
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(res_content))
 }

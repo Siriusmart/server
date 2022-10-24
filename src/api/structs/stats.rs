@@ -1,4 +1,10 @@
-use std::{fs::{OpenOptions, self}, path::Path, error::Error, collections::HashMap, io::Write};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::{self, OpenOptions},
+    io::Write,
+    path::Path,
+};
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -10,8 +16,8 @@ pub struct SessionStats {
     pub served_paths: HashMap<String, u32>,
 }
 
-impl SessionStats {
-    pub fn new() -> Self {
+impl Default for SessionStats {
+    fn default() -> Self {
         Self {
             start: Utc::now().timestamp_millis(),
             served: 0,
@@ -37,18 +43,16 @@ impl Default for LifetimeStats {
     }
 }
 
-const LIFETIME_STATS_PATH: &'static str = "./storage/stats/lifetime.json";
+const LIFETIME_STATS_PATH: &str = "./storage/stats/lifetime.json";
 
 impl LifetimeStats {
     pub fn load() -> Self {
         let path = Path::new(LIFETIME_STATS_PATH);
 
         match fs::read_to_string(path) {
-            Ok(content) => {
-                match serde_json::from_str(&content) {
-                    Ok(content) => content,
-                    Err(_) => Self::default(),
-                }
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(content) => content,
+                Err(_) => Self::default(),
             },
             Err(_) => Self::default(),
         }
@@ -65,8 +69,8 @@ impl LifetimeStats {
 
         let serialized = serde_json::to_string(&self)?;
 
-        file.write(serialized.as_bytes())?;
-        
+        file.write_all(serialized.as_bytes())?;
+
         Ok(())
     }
 
@@ -78,7 +82,7 @@ impl LifetimeStats {
                 Some(path) => *path += value,
                 None => {
                     self.served_paths.insert(key.to_string(), *value);
-                },
+                }
             }
         }
 

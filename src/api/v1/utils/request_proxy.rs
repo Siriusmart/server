@@ -1,10 +1,12 @@
 use actix_web::{get, http::header::ContentType, web, HttpResponse, Scope};
-use serde_json::{Value, Map};
+use serde_json::{Map, Value};
 use std::error::Error;
 
 use crate::api::structs::errors::BlankError;
 
-async fn process<'a>(query: &'a mut web::Query<Value>) -> Result<&mut Map<String, Value>, Box<dyn Error>> {
+async fn process<'a>(
+    query: &'a mut web::Query<Value>,
+) -> Result<&mut Map<String, Value>, Box<dyn Error>> {
     let value = query.as_object_mut().unwrap();
     match value.get("url") {
         Some(url) => {
@@ -13,8 +15,8 @@ async fn process<'a>(query: &'a mut web::Query<Value>) -> Result<&mut Map<String
 
             value.remove("url");
             value.insert(String::from("content"), Value::String(content));
-            },
-        None => Err(BlankError)?,
+        }
+        None => return Err(BlankError.into()),
     }
 
     Ok(value)
@@ -30,9 +32,9 @@ async fn normal(mut query: web::Query<Value>) -> Result<HttpResponse, Box<dyn Er
 #[get("/html")]
 async fn html(mut query: web::Query<Value>) -> Result<HttpResponse, Box<dyn Error>> {
     let map = process(&mut query).await?;
-    let content = html_escape::encode_safe(map.get("content").unwrap().as_str().unwrap()).to_string();
+    let content =
+        html_escape::encode_safe(map.get("content").unwrap().as_str().unwrap()).to_string();
     *map.get_mut("content").unwrap() = Value::String(content);
-
 
     let html = format!(
         r#"
