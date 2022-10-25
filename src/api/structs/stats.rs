@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     error::Error,
     fs::{self, OpenOptions},
     io::Write,
@@ -13,7 +12,6 @@ use serde::{Deserialize, Serialize};
 pub struct SessionStats {
     pub start: i64,
     pub served: u32,
-    pub served_paths: HashMap<String, u32>,
 }
 
 impl Default for SessionStats {
@@ -21,7 +19,6 @@ impl Default for SessionStats {
         Self {
             start: Utc::now().timestamp_millis(),
             served: 0,
-            served_paths: HashMap::new(),
         }
     }
 }
@@ -29,7 +26,6 @@ impl Default for SessionStats {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LifetimeStats {
     pub served: u32,
-    pub served_paths: HashMap<String, u32>,
     pub total_uptime: u64,
 }
 
@@ -38,7 +34,6 @@ impl Default for LifetimeStats {
         Self {
             served: 0,
             total_uptime: 0,
-            served_paths: HashMap::new(),
         }
     }
 }
@@ -76,16 +71,6 @@ impl LifetimeStats {
 
     pub fn merge(&mut self, session: &SessionStats) {
         self.served += session.served;
-
-        for (key, value) in session.served_paths.iter() {
-            match self.served_paths.get_mut(key) {
-                Some(path) => *path += value,
-                None => {
-                    self.served_paths.insert(key.to_string(), *value);
-                }
-            }
-        }
-
         self.total_uptime += (Utc::now().timestamp_millis() - session.start) as u64;
     }
 }

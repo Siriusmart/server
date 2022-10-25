@@ -18,6 +18,8 @@ Api V1 (`/api/v1`):
     `/create/{username}/{password}`: Creates an account
     `/login/{username or id}/{password}`: Check if you got the correct password
     `/delete/{username or id}/{password}`: Deletes an account
+    `/changepassword/{username or id}/{old password}/{new password}`: Changes to password of an account
+    `/rename/{username or id}/{password}/{new username}`: Changes username of an account
 
 All account info are encrypted
 A hash and salt is used in passwords
@@ -27,5 +29,4 @@ USERID_SALT=SALT_OF_ANY_LENGTH
 USERNAME_SALT=SALT_OF_ANY_LENGTH
 PASSWORD_SALT=SALT_OF_ANY_LENGTH
 ACCOUNTS_FILES_KEY=64_CHARS_LONG_HASH
-USERNAME_FILES_KEY=64_CHARS_LONG_HASH
-```
+USERNAME_FILES_KEY=64_CHARS_LONG_HASH```

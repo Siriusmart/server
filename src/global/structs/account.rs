@@ -171,6 +171,42 @@ impl Account {
 
         path.exists()
     }
+
+    pub fn login(mut username_or_id: String, password: String) -> Result<Account, String> {
+        let id = if Account::exists(&username_or_id) {
+            username_or_id
+        } else {
+            username_or_id = username_or_id.to_lowercase();
+            if Account::exists_username(&username_or_id) {
+                if let Ok(id) = Account::load_username(&username_or_id) {
+                    id
+                } else {
+                    return Err(String::from("error getting user id from username"));
+                }
+            } else {
+                return Err(String::from("no such user with this username or id"));
+            }
+        };
+
+        let account = match Account::load(&id) {
+            Ok(account) => account,
+            Err(e) => {
+                return Err(e.to_string());
+            }
+        };
+
+        let hashed_password = Account::password_hash(&id, password);
+
+        if hashed_password != account.password_hash {
+            return Err(String::from("incorrect password"));
+        }
+
+        Ok(account)
+    }
+
+    pub fn bump(&mut self) {
+        self.last_seen = Utc::now().timestamp() as u64;
+    }
 }
 
 #[derive(Debug)]

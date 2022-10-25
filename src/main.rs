@@ -28,7 +28,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .wrap(Logger::default())
             .wrap_fn(move |req, srv| {
                 let session_stats_cloned = session_stats_for_middleware.clone();
-                let req_path = req.path().to_string();
 
                 srv.call(req).map(move |res| {
                     let res_unwrapped = match &res {
@@ -42,12 +41,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                     let session_stats = &mut *session_stats_cloned.lock().unwrap();
                     session_stats.served += 1;
-                    match session_stats.served_paths.get_mut(&req_path) {
-                        Some(path) => *path += 1,
-                        None => {
-                            session_stats.served_paths.insert(req_path, 1);
-                        }
-                    }
 
                     res
                 })

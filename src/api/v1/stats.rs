@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
 };
@@ -11,41 +10,37 @@ use serde::Serialize;
 use crate::api::structs::stats::{LifetimeStats, SessionStats};
 
 #[derive(Serialize)]
-pub struct StatsRes<'a> {
+pub struct StatsRes {
     pub software: SoftwareStatsRes,
-    pub session: SessionStatsRes<'a>,
-    pub lifetime: LifetimeStatsRes<'a>,
+    pub session: SessionStatsRes,
+    pub lifetime: LifetimeStatsRes,
 }
 
 #[derive(Serialize)]
-pub struct SessionStatsRes<'a> {
+pub struct SessionStatsRes {
     pub start: i64,
     pub uptime: i64,
     pub served: u32,
-    pub served_paths: &'a HashMap<String, u32>,
 }
 
 #[derive(Serialize)]
-pub struct LifetimeStatsRes<'a> {
+pub struct LifetimeStatsRes {
     pub total_uptime: u64,
     pub served: u32,
-    pub served_paths: &'a HashMap<String, u32>,
 }
 
-impl<'a> From<(&'a SessionStats, &'a LifetimeStats)> for StatsRes<'a> {
-    fn from((session_stats, lifetime_stats): (&'a SessionStats, &'a LifetimeStats)) -> Self {
+impl From<(&SessionStats, &LifetimeStats)> for StatsRes {
+    fn from((session_stats, lifetime_stats): (&SessionStats, &LifetimeStats)) -> Self {
         Self {
             software: SoftwareStatsRes::default(),
             lifetime: LifetimeStatsRes {
                 total_uptime: lifetime_stats.total_uptime,
                 served: lifetime_stats.served,
-                served_paths: &lifetime_stats.served_paths,
             },
             session: SessionStatsRes {
                 start: session_stats.start,
                 uptime: Utc::now().timestamp_millis() - session_stats.start,
                 served: session_stats.served,
-                served_paths: &session_stats.served_paths,
             },
         }
     }

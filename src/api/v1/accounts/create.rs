@@ -1,6 +1,6 @@
 use crate::global::structs::Account;
 use actix_web::{get, web, Responder};
-use serde::{Deserialize, Serialize};
+use crate::api::v1::accounts::responses::AccountResponse;
 use std::error::Error;
 
 #[get("/create/{username}/{password}")]
@@ -9,7 +9,7 @@ async fn create(path: web::Path<(String, String)>) -> impl Responder {
     username = username.to_lowercase();
 
     if Account::exists_username(&username) {
-        return web::Json(AccountCreateResponse::Error {
+        return web::Json(AccountResponse::Error {
             error: String::from("username taken"),
         });
     }
@@ -22,20 +22,13 @@ async fn create(path: web::Path<(String, String)>) -> impl Responder {
     })();
 
     if let Err(e) = res {
-        return web::Json(AccountCreateResponse::Error {
+        return web::Json(AccountResponse::Error {
             error: e.to_string(),
         });
     }
 
-    web::Json(AccountCreateResponse::Success {
+    web::Json(AccountResponse::Success {
         username,
         id: account.user_id,
     })
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum AccountCreateResponse {
-    Success { username: String, id: String },
-    Error { error: String },
 }
