@@ -1,4 +1,3 @@
-use crate::api::v1::accounts::responses::AccountResponse;
 use crate::global::structs::{Account, VerificationStore, VerificationType};
 use actix_web::{get, web, Responder};
 use std::error::Error;
@@ -9,9 +8,7 @@ async fn create(path: web::Path<(String, String, String)>) -> impl Responder {
 
     for c in username.chars() {
         if !c.is_ascii_alphanumeric() && c != '_' {
-            return web::Json(AccountResponse::Error {
-                error: String::from("username contains illegal characters"),
-            });
+            return String::from("Username contains illegal characters");
         }
     }
 
@@ -19,15 +16,11 @@ async fn create(path: web::Path<(String, String, String)>) -> impl Responder {
     email = email.to_lowercase();
 
     if Account::exists_username(&username) {
-        return web::Json(AccountResponse::Error {
-            error: String::from("username taken"),
-        });
+        return String::from("Username taken");
     }
 
     if Account::exists_email(&email) {
-        return web::Json(AccountResponse::Error {
-            error: String::from("email is in use"),
-        });
+        return String::from("Email is in use");
     }
 
     let account = Account::new(username.clone(), password, email.clone());
@@ -43,9 +36,7 @@ async fn create(path: web::Path<(String, String, String)>) -> impl Responder {
     .await;
 
     if let Err(e) = res {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return format!("Error sending verification email: {e}");
     }
 
     let res = (|| -> Result<(), Box<dyn Error>> {
@@ -56,14 +47,8 @@ async fn create(path: web::Path<(String, String, String)>) -> impl Responder {
     })();
 
     if let Err(e) = res {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return e.to_string();
     }
 
-    web::Json(AccountResponse::Success {
-        username,
-        id: account.user_id,
-        email: account.email,
-    })
+    format!("Account has been successfully created:\n\nUsername: {}\nUser ID: {}\nEmail: {}\n\nPlease verify your email address.", account.username, account.user_id, account.email)
 }

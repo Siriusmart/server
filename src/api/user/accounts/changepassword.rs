@@ -1,4 +1,3 @@
-use crate::api::v1::accounts::responses::AccountResponse;
 use crate::global::structs::Account;
 use actix_web::{get, web, Responder};
 
@@ -8,20 +7,17 @@ async fn changepassword(path: web::Path<(String, String, String)>) -> impl Respo
 
     let mut account = match Account::login(username_or_id, old_password) {
         Ok(account) => account,
-        Err(e) => return web::Json(AccountResponse::Error { error: e }),
+        Err(e) => return format!("Error: {e}"),
     };
 
     let new_hashed_password = Account::password_hash(&account.user_id, new_password);
     account.password_hash = new_hashed_password;
     if let Err(e) = account.save() {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return format!("Error: {e}");
     }
 
-    web::Json(AccountResponse::Success {
-        username: account.username,
-        id: account.user_id,
-        email: account.email,
-    })
+    format!(
+        "Password has been successfully changed:\n\nUsername: {}\nUser ID: {}\nEmail: {}",
+        account.username, account.user_id, account.email
+    )
 }

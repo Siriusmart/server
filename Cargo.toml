@@ -20,3 +20,4 @@ sha2 = "0.10"
 aes-gcm-siv = "0.11"
 hex = "0.4"
 rand = "0.8"
+lettre = { version = "0.10", features = ["tokio1", "tokio1-native-tls"] }

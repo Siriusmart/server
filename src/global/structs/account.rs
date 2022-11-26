@@ -12,13 +12,15 @@ use std::{
 
 use crate::global::functions::{cipher, decipher, sha384};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Account {
     pub password_hash: String,
+    pub email: String,
     pub user_id: String,
     pub username: String,
     pub last_seen: u64,
     pub created: u64,
+    pub verified: bool,
 }
 
 impl Account {
@@ -43,10 +45,18 @@ impl Account {
             env::var("USERNAME_SALT").unwrap()
         )))
     }
+
+    pub fn email_hash(email: &str) -> String {
+        hex::encode(sha384(&format!(
+            "{}{}",
+            email,
+            env::var("EMAIL_SALT").unwrap()
+        )))
+    }
 }
 
 impl Account {
-    pub fn new(username: String, password: String) -> Self {
+    pub fn new(username: String, password: String, email: String) -> Self {
         let current_time = Utc::now().timestamp() as u64;
         let user_id = loop {
             let user_id = rand::thread_rng().gen_range(0..u64::MAX);
@@ -58,9 +68,11 @@ impl Account {
         Self {
             password_hash: Self::password_hash(&user_id.to_string(), password),
             user_id,
+            email,
             username,
             last_seen: current_time,
             created: current_time,
+            verified: false,
         }
     }
 
@@ -122,6 +134,26 @@ impl Account {
         Ok(())
     }
 
+    pub fn save_email(&self) -> Result<(), Box<dyn Error>> {
+        let hashed_email = Account::email_hash(&self.email);
+        let path = PathBuf::from(format!("./storage/accounts/emails/{}", &hashed_email));
+
+        let encrypted_string = cipher(
+            &self.user_id.to_string(),
+            &env::var("EMAIL_FILES_KEY").unwrap(),
+            hashed_email.into_bytes(),
+        )?;
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+
+        file.write_all(encrypted_string.as_bytes())?;
+        Ok(())
+    }
+
     pub fn load_username(username: &str) -> Result<String, Box<dyn Error>> {
         let hashed_username = Account::username_hash(username);
         let path = PathBuf::from(format!("./storage/accounts/usernames/{}", &hashed_username));
@@ -138,6 +170,22 @@ impl Account {
         Ok(decrypted_string)
     }
 
+    pub fn load_email(email: &str) -> Result<String, Box<dyn Error>> {
+        let hashed_email = Account::email_hash(email);
+        let path = PathBuf::from(format!("./storage/accounts/emails/{}", &hashed_email));
+
+        if !path.exists() {
+            return Err(Box::new(AccountError::UserNotExist));
+        }
+
+        let decrypted_string = decipher(
+            &fs::read_to_string(path)?,
+            &env::var("EMAIL_FILES_KEY").unwrap(),
+            hashed_email.into_bytes(),
+        )?;
+        Ok(decrypted_string)
+    }
+
     pub fn delete(id: &str) -> Result<(), Box<dyn Error>> {
         let hashed_id = Account::userid_hash(id);
         let path = PathBuf::from(format!("./storage/accounts/profiles/{}", &hashed_id));
@@ -149,6 +197,14 @@ impl Account {
     pub fn delete_username(username: &str) -> Result<(), Box<dyn Error>> {
         let hashed_username = Account::username_hash(username);
         let path = PathBuf::from(format!("./storage/accounts/usernames/{}", &hashed_username));
+
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    pub fn delete_email(email: &str) -> Result<(), Box<dyn Error>> {
+        let hashed_email = Account::email_hash(email);
+        let path = PathBuf::from(format!("./storage/accounts/emails/{}", &hashed_email));
 
         fs::remove_file(path)?;
         Ok(())
@@ -172,20 +228,36 @@ impl Account {
         path.exists()
     }
 
-    pub fn login(mut username_or_id: String, password: String) -> Result<Account, String> {
-        let id = if Account::exists(&username_or_id) {
-            username_or_id
-        } else {
-            username_or_id = username_or_id.to_lowercase();
-            if Account::exists_username(&username_or_id) {
-                if let Ok(id) = Account::load_username(&username_or_id) {
-                    id
-                } else {
-                    return Err(String::from("error getting user id from username"));
-                }
+    pub fn exists_email(email: &str) -> bool {
+        let hashed_email = hex::encode(sha384(&format!(
+            "{}{}",
+            email,
+            env::var("EMAIL_SALT").unwrap()
+        )));
+        let path = PathBuf::from(format!("./storage/accounts/emails/{}", &hashed_email));
+
+        path.exists()
+    }
+
+    pub fn login(mut identifier: String, password: String) -> Result<Account, String> {
+        identifier = identifier.to_lowercase();
+
+        let id = if Account::exists(&identifier) {
+            identifier
+        } else if Account::exists_username(&identifier) {
+            if let Ok(id) = Account::load_username(&identifier) {
+                id
             } else {
-                return Err(String::from("no such user with this username or id"));
+                return Err(String::from("error getting user id from username"));
             }
+        } else if Account::exists_email(&identifier) {
+            if let Ok(id) = Account::load_email(&identifier) {
+                id
+            } else {
+                return Err(String::from("error getting user id from email"));
+            }
+        } else {
+            return Err(String::from("no such user with this username or id"));
         };
 
         let account = match Account::load(&id) {

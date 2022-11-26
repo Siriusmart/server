@@ -1,4 +1,3 @@
-use crate::api::v1::accounts::responses::AccountResponse;
 use crate::global::structs::Account;
 use actix_web::{get, web, Responder};
 
@@ -9,36 +8,27 @@ async fn rename(path: web::Path<(String, String, String)>) -> impl Responder {
 
     let mut account = match Account::login(username_or_id, password) {
         Ok(account) => account,
-        Err(e) => return web::Json(AccountResponse::Error { error: e }),
+        Err(e) => return format!("Error: {e}"),
     };
 
     if Account::exists_username(&new_username) {
-        return web::Json(AccountResponse::Error {
-            error: String::from("username taken"),
-        });
+        return String::from("Username has been taken, try using another username");
     }
 
     if let Err(e) = Account::delete_username(&account.username) {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return format!("Error: {e}");
     }
     account.username = new_username;
 
     if let Err(e) = account.save_username() {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return format!("Error: {e}");
     };
     if let Err(e) = account.save() {
-        return web::Json(AccountResponse::Error {
-            error: e.to_string(),
-        });
+        return format!("Error: {e}");
     }
 
-    web::Json(AccountResponse::Success {
-        username: account.username,
-        id: account.user_id,
-        email: account.email,
-    })
+    format!(
+        "Account has been renamed:\n\nUsername: {}\nUser ID: {}\nEmail: {}",
+        account.username, account.user_id, account.email
+    )
 }

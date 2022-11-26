@@ -46,7 +46,7 @@ impl From<(&SessionStats, &LifetimeStats)> for StatsRes {
     }
 }
 
-const VERSION: &str = "0.1.0";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Serialize)]
 pub struct SoftwareStatsRes {

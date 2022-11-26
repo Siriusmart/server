@@ -1,8 +1,5 @@
 use actix_web::{web, Scope};
 
-mod responses;
-pub use responses::*;
-
 mod changepassword;
 mod changeemail;
 mod create;

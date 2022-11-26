@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .run()
     .await?;
 
-    lifetime_stats.merge(&*session_stats.lock().unwrap());
+    lifetime_stats.merge(&session_stats.lock().unwrap());
     lifetime_stats.write()?;
 
     Ok(())

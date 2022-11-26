@@ -30,5 +30,15 @@ pub fn init() -> Result<(), Box<dyn Error>> {
     if !path.exists() {
         fs::create_dir(path)?;
     }
+
+    path = Path::new("./storage/accounts/emails");
+    if !path.exists() {
+        fs::create_dir(path)?;
+    }
+
+    path = Path::new("./storage/verifications");
+    if !path.exists() {
+        fs::create_dir(path)?;
+    }
     Ok(())
 }

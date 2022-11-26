@@ -5,7 +5,7 @@ use std::error::Error;
 use crate::api::structs::errors::BlankError;
 
 async fn process<'a>(
-    query: &'a mut web::Query<Value>,
+    query: &'_ mut web::Query<Value>,
 ) -> Result<&mut Map<String, Value>, Box<dyn Error>> {
     let value = query.as_object_mut().unwrap();
     match value.get("url") {
